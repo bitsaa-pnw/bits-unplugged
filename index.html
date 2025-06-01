@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Redirector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Inter font and overall layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            margin: 0;
+            padding: 20px; /* Add some padding around the content */
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: #ffffff; /* White background for the container */
+            padding: 32px; /* Ample padding */
+            border-radius: 12px; /* Rounded corners */
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 5px 15px -5px rgba(0, 0, 0, 0.04); /* Soft shadow */
+            text-align: center;
+        }
+        /* Style for the loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6; /* Blue spinner color */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto; /* Center spinner and add margin below */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container flex flex-col items-center justify-center">
+        <div id="loading-spinner" class="spinner"></div>
+        <p id="message" class="text-lg text-gray-700 mt-4">Attempting to redirect...</p>
+    </div>
+
+    <script>
+        // Define the URL of your published Google Sheet CSV file.
+        // IMPORTANT: You MUST replace 'YOUR_GOOGLE_SHEET_CSV_URL_HERE' with the actual URL you copied
+        // from Google Sheets after publishing your sheet to the web as a CSV.
+        // Example: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR.../pub?output=csv'
+        const GOOGLE_SHEET_CSV_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
+
+        const messageElement = document.getElementById('message');
+        const spinnerElement = document.getElementById('loading-spinner');
+
+        /**
+         * Displays a message to the user and hides the loading spinner.
+         * @param {string} msg The message to display.
+         * @param {string} type The type of message ('success', 'error', 'info').
+         */
+        function displayMessage(msg, type = 'info') {
+            messageElement.textContent = msg;
+            spinnerElement.classList.add('hidden'); // Hide the spinner
+
+            // Apply styling based on message type
+            messageElement.classList.remove('text-gray-700', 'text-red-500', 'text-green-500');
+            if (type === 'error') {
+                messageElement.classList.add('text-red-500');
+            } else if (type === 'success') {
+                messageElement.classList.add('text-green-500');
+            } else {
+                messageElement.classList.add('text-gray-700');
+            }
+        }
+
+        /**
+         * Fetches the CSV data from the specified Google Sheet URL.
+         * @returns {Promise<string>} A promise that resolves with the CSV text.
+         */
+        async function fetchCsvData() {
+            try {
+                // Ensure the URL is valid before attempting to fetch
+                new URL(GOOGLE_SHEET_CSV_URL); // This will throw a TypeError if the URL is malformed
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.text();
+            } catch (error) {
+                console.error('Error fetching CSV data:', error);
+                // Provide a more specific message if the URL is the placeholder
+                if (GOOGLE_SHEET_CSV_URL === 'YOUR_GOOGLE_SHEET_CSV_URL_HERE') {
+                    displayMessage('Please replace "YOUR_GOOGLE_SHEET_CSV_URL_HERE" with your actual Google Sheet CSV URL.', 'error');
+                } else {
+                    displayMessage('Failed to load redirection data. Please check the Google Sheet URL and its publish settings.', 'error');
+                }
+                return null;
+            }
+        }
+
+        /**
+         * Parses CSV text into an array of objects.
+         * Assumes the first row is the header.
+         * @param {string} csvText The CSV data as a string.
+         * @returns {Array<Object>} An array of objects, where each object represents a row.
+         */
+        function parseCsv(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length === 0) {
+                return [];
+            }
+
+            // Split by comma, but handle quoted commas if necessary (simple split for now)
+            const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] ? values[index].trim() : ''; // Trim whitespace
+                });
+                data.push(row);
+            }
+            return data;
+        }
+
+        /**
+         * Extracts the short path from the current URL.
+         * Handles both root-level GitHub Pages (username.github.io/short-path)
+         * and project-level GitHub Pages (username.github.io/repo-name/short-path).
+         * @returns {string} The extracted short path.
+         */
+        function getShortPathFromUrl() {
+            // Get the full path, e.g., "/your-repo/short-path" or "/short-path"
+            const pathname = window.location.pathname;
+
+            // Split the pathname by '/' and filter out empty strings
+            const pathSegments = pathname.split('/').filter(segment => segment);
+
+            // If there are segments, the last one is likely the short path.
+            // If it's a root-level page or a repo with no specific path, it might be empty.
+            // Example: "username.github.io/my-repo/" -> pathSegments = ["my-repo"]
+            // Example: "username.github.io/my-repo/blog" -> pathSegments = ["my-repo", "blog"]
+            // Example: "username.github.io/blog" (user page) -> pathSegments = ["blog"]
+
+            // Determine if it's a project page (e.g., /repo-name/...) or a user page (e.g., /...)
+            // A simple heuristic: if the first segment matches the repository name, it's a project page.
+            // This is not foolproof but works for common GitHub Pages setups.
+            const repoName = window.location.hostname.includes('.github.io') ?
+                             window.location.pathname.split('/')[1] : '';
+
+            let shortPath = '';
+            if (repoName && pathSegments[0] === repoName) {
+                // It's a project page, so the short path is the segment after the repo name
+                if (pathSegments.length > 1) {
+                    shortPath = pathSegments[1];
+                }
+            } else {
+                // It's a user/organization page or a direct path, so the first segment is the short path
+                if (pathSegments.length > 0) {
+                    shortPath = pathSegments[0];
+                }
+            }
+
+            return shortPath;
+        }
+
+        /**
+         * Main function to fetch data and perform redirection.
+         */
+        async function initRedirect() {
+            const csvText = await fetchCsvData();
+            if (!csvText) {
+                return; // Exit if CSV data couldn't be fetched
+            }
+
+            const redirectMap = parseCsv(csvText);
+            const currentShortPath = getShortPathFromUrl();
+
+            console.log('Current short path:', currentShortPath);
+            console.log('Redirect map:', redirectMap);
+
+            // Find a match in the redirect map
+            const match = redirectMap.find(entry => entry.short_path === currentShortPath);
+
+            if (match && match.long_url) {
+                displayMessage(`Redirecting to: ${match.long_url}`, 'success');
+                // Perform the redirection
+                window.location.replace(match.long_url);
+            } else {
+                displayMessage(`No redirect found for "${currentShortPath}".`, 'error');
+                // You can add a fallback here, e.g., redirect to a default page:
+                // setTimeout(() => {
+                //     window.location.replace('https://your-default-page.com');
+                // }, 3000); // Redirect after 3 seconds
+            }
+        }
+
+        // Initialize the redirection process when the window loads
+        window.onload = initRedirect;
+    </script>
+</body>
+</html>

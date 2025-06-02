@@ -44,6 +44,9 @@ window.onload = function() {
     const allContactsTabContent = document.getElementById('all-contacts-tab-content');
     const allContactsList = document.getElementById('all-contacts-list');
     const noAllContactsMessage = document.getElementById('no-all-contacts-message');
+    // NEW: All Contacts Search Element
+    const allContactsSearchInput = document.getElementById('all-contacts-search');
+
 
     // --- Contact Card Elements ---
     const contactCard = document.getElementById('contact-card');
@@ -135,7 +138,7 @@ window.onload = function() {
             renderFavoritedContacts(); // Re-render the list if favorites tab is active
         }
         if (allContactsTabContent.style.display !== 'none') { // NEW: Re-render all contacts if that tab is active
-            renderAllContacts();
+            filterAllContacts(); // Re-render with current filter
         }
     }
 
@@ -500,17 +503,17 @@ window.onload = function() {
     }
 
     // --- NEW: All Contacts List Logic ---
-    function renderAllContacts() {
+    function renderAllContacts(contactsToRender = allContactsData) { // Added parameter
         allContactsList.innerHTML = ''; // Clear previous list
 
-        if (allContactsData.length === 0) {
+        if (contactsToRender.length === 0) { // Use contactsToRender
             noAllContactsMessage.style.display = 'block';
             return;
         } else {
             noAllContactsMessage.style.display = 'none';
         }
 
-        allContactsData.forEach(contact => {
+        contactsToRender.forEach(contact => { // Iterate over contactsToRender
             const contactItem = document.createElement('div');
             contactItem.className = 'contact-item bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between';
 
@@ -570,6 +573,18 @@ window.onload = function() {
                 loadContactCard(contactId); // Load the specific contact
             });
         });
+    }
+
+    // NEW: Function to filter all contacts
+    function filterAllContacts() {
+        const searchTerm = allContactsSearchInput.value.toLowerCase();
+        const filtered = allContactsData.filter(contact => {
+            return (contact['display name'] && contact['display name'].toLowerCase().includes(searchTerm)) ||
+                   (contact.subtitle && contact.subtitle.toLowerCase().includes(searchTerm)) ||
+                   (contact.email && contact.email.toLowerCase().includes(searchTerm)) ||
+                   (contact['contact number'] && contact['contact number'].includes(searchTerm));
+        });
+        renderAllContacts(filtered);
     }
 
     // --- Data Fetching and Initialization ---
@@ -703,7 +718,7 @@ window.onload = function() {
             tabAllContactsBtn.classList.add('border-blue-600', 'text-blue-600');
             tabAllContactsBtn.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
             allContactsTabContent.style.display = 'block';
-            renderAllContacts(); // Render all contacts when tab is opened
+            filterAllContacts(); // Render all contacts (with any existing filter) when tab is opened
         }
     }
 
@@ -741,6 +756,9 @@ window.onload = function() {
     tabFavoritesBtn.addEventListener('click', () => switchTab('favorites'));
     // NEW: Event Listener for All Contacts tab
     tabAllContactsBtn.addEventListener('click', () => switchTab('all-contacts'));
+
+    // NEW: Event Listener for All Contacts search input
+    allContactsSearchInput.addEventListener('input', filterAllContacts);
 
     // Initial data fetch and display
     fetchAndProcessData();

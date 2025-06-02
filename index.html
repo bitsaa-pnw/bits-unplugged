@@ -248,12 +248,12 @@
         domReady(function() { 
             // Set this to 'true' to use the hardcoded debug data below.
             // Set to 'false' to fetch from the Google Spreadsheet URL.
-            const DEBUG_MODE = true; 
+            const DEBUG_MODE = false; 
 
-            // IMPORTANT: Replace this URL with your actual Google Spreadsheet JSON URL.
+            // IMPORTANT: Replace this URL with your actual Google Spreadsheet TSV URL.
             // This URL is only used if DEBUG_MODE is set to false.
-            // Example format: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/gviz/tq?tqx=out:json&gid=YOUR_SHEET_GID
-            const googleSpreadsheetJsonUrl = 'YOUR_GOOGLE_SPREADSHEET_JSON_URL_HERE'; 
+            // Example format: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=tsv&gid=YOUR_SHEET_GID
+            const googleSpreadsheetTSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CVEFb-TyetHgpABQev94sh_DHclHh62O6_hJIzIoWB6hVxMS-hHvIDhbEGzwxPVnMRf9KXNyiokl/pub?output=tsv'
 
             // Debug data in JSON format (mimics the structure we want after parsing)
             const debugJsonData = [
@@ -658,34 +658,31 @@
                 if (DEBUG_MODE) {
                     dataSourcePromise = Promise.resolve(debugJsonData); // Directly use debug JSON data
                 } else {
-                    dataSourcePromise = fetch(googleSpreadsheetJsonUrl)
+                    dataSourcePromise = fetch(googleSpreadsheetTSVUrl)
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error(`HTTP error! status: ${response.status}. Check if the spreadsheet URL is correct and published publicly.`);
                             }
-                            return response.text(); // Get as text first to handle gviz wrapper
+                            return response.text(); // Get as text to parse TSV
                         })
-                        .then(jsonText => {
-                            // Google Sheets API returns JSON with a 'google.visualization.Query.setResponse(' wrapper
-                            // We need to strip this wrapper
-                            const startIndex = jsonText.indexOf('(') + 1;
-                            const endIndex = jsonText.lastIndexOf(')');
-                            const jsonString = jsonText.substring(startIndex, endIndex);
-                            const jsonData = JSON.parse(jsonString);
-
-                            if (jsonData.table && jsonData.table.cols && jsonData.table.rows) {
-                                const headers = jsonData.table.cols.map(col => col.label);
-                                return jsonData.table.rows.map(row => {
-                                    const rowObject = {};
-                                    row.c.forEach((cell, index) => {
-                                        // 'v' is the value, 'f' is formatted value (if any)
-                                        rowObject[headers[index]] = cell && cell.v !== null ? String(cell.v) : '';
-                                    });
-                                    return rowObject;
-                                });
-                            } else {
-                                throw new Error("Invalid JSON structure from Google Spreadsheet API.");
+                        .then(tsvText => {
+                            const lines = tsvText.trim().split('\n');
+                            if (lines.length === 0) {
+                                return [];
                             }
+
+                            const headers = lines[0].split('\t').map(header => header.trim());
+                            const contacts = [];
+
+                            for (let i = 1; i < lines.length; i++) {
+                                const values = lines[i].split('\t');
+                                const contact = {};
+                                headers.forEach((header, index) => {
+                                    contact[header] = values[index] ? values[index].trim() : '';
+                                });
+                                contacts.push(contact);
+                            }
+                            return contacts;
                         });
                 }
 

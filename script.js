@@ -311,7 +311,7 @@ window.onload = function() {
 
             // Populate front of the card
             displayNameFrontElem.textContent = foundContact['display name'];
-            subtitleFrontElem.textContent = foundContact['subtitle'] || '';
+            subtitleFrontElem.innerHTML = foundContact['subtitle'] || '';
 
             // Populate back of the card
             displayNameBackElem.textContent = foundContact['display name'];

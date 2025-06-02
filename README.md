@@ -1,6 +1,10 @@
-# Contact Hub
+# Contact Hub - An app for sharing contacts in email
 
-Contact Hub is a web application designed to display contact information, allow users to favorite contacts, and save contact details as vCards. It features a modern, responsive design using Tailwind CSS and integrates QR code scanning functionality for easy contact loading.
+Contact Hub is a web application designed to display contact information, allow users to favorite contacts, and save contact details as vCards.
+
+It enables contact sharing during events and provide guests with an editable contact link. So, if your guests have not provided information before the event, they can update their details on the fly.
+
+It features a modern, responsive design using Tailwind CSS and integrates QR code scanning functionality for easy contact loading.
 
 ## Motivation
 

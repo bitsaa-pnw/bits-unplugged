@@ -730,7 +730,7 @@
                             loadContactCard(idFromUrl);
                         } else {
                             // If no ID is provided and not in debug mode, or no default, show not found
-                            showNotFoundMessage();
+                            console.log("No id provided and not in debug mode");
                         }
                     })
                     .catch(error => {

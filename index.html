@@ -150,7 +150,7 @@
                 <p id="qr-scan-status" class="text-sm text-gray-500 mt-2"></p>
             </div>
 
-            <div id="contact-card" class="contact-card">
+            <div id="contact-card" class="contact-card" display="none">
                 <div id="card-inner" class="card-inner">
                     <div id="card-front" class="card-face card-front">
                         <h2 id="display-name-front" class="text-3xl font-bold text-gray-800 mb-2">Loading Contact...</h2>
@@ -208,7 +208,7 @@
                 </div>
             </div>
 
-            <div id="not-found" class="not-found text-red-600 text-xl font-semibold mt-8 text-center" >
+            <div id="not-found" class="not-found text-red-600 text-xl font-semibold mt-8 text-center" style="display: none;">
                 <p>Contact not found.</p>
                 <p id="contact-error-msg" class="text-base text-gray-500 mt-2">Contact not found in dataset</p>
             </div>
@@ -457,7 +457,7 @@
 
             function stopQrScanner() {
                 console.log("Stopping QR scanner...");
-                if (html5QrCodeScanner.html5Qrcode.isScanning) {
+                if (html5QrCodeScanner && html5QrCodeScanner.html5Qrcode.isScanning) {
                     try {
                         html5QrCodeScanner.clear();
                         html5QrCodeScanner.pause();
@@ -723,7 +723,8 @@
                             loadContactCard(idFromUrl);
                         } else {
                             // If no ID is provided and not in debug mode, or no default, show not found
-                            showNotFoundMessage();
+                            contactCard.style.display = 'none';
+                            console.warn("No contact ID provided in URL or debug mode");
                         }
                     })
                     .catch(error => {

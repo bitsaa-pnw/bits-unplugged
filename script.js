@@ -312,12 +312,6 @@ window.onload = function() {
     function redirectToPrefilledForm(contactId) {
         const contactToEdit = allContactsData.find(contact => contact.id === contactId);
 
-        if (!contactToEdit) {
-            showNotFoundMessage();
-            document.getElementById('contact-error-msg').textContent = `Contact with ID '${contactId}' not found in dataset.`;
-            return;
-        }
-
         const googleFormBaseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdbWHo9YurZeDt809iKRf87mNaGLGWHEB35hPEmQjJmJx1MYg/viewform';
         const entryIds = {
             'id': 'entry.425553741',
@@ -332,11 +326,13 @@ window.onload = function() {
         let prefilledUrl = `${googleFormBaseUrl}?usp=pp_url`;
 
         for (const key in entryIds) {
-            const value = contactToEdit[key] || ''; // Use empty string for null/undefined values
+            // Ensure the 'id' field always uses the contactId from the URL
+            // and other fields use data from contactToEdit if found, else empty string.
+            const value = (key === 'id') ? contactId : (contactToEdit && contactToEdit[key]) || '';
             prefilledUrl += `&${entryIds[key]}=${encodeURIComponent(value)}`;
         }
 
-        // Display the contact card first
+        // Display the contact card first (will show 'not found' if contactToEdit is null)
         loadContactCard(contactId);
         switchTab('contact-card');
 

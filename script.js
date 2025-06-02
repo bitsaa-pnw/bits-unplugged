@@ -39,6 +39,12 @@ window.onload = function() {
     const contactCardTabContent = document.getElementById('contact-card-tab-content');
     const favoritesTabContent = document.getElementById('favorites-tab-content');
 
+    // NEW: All Contacts Tab Elements
+    const tabAllContactsBtn = document.getElementById('tab-all-contacts');
+    const allContactsTabContent = document.getElementById('all-contacts-tab-content');
+    const allContactsList = document.getElementById('all-contacts-list');
+    const noAllContactsMessage = document.getElementById('no-all-contacts-message');
+
     // --- Contact Card Elements ---
     const contactCard = document.getElementById('contact-card');
     const cardInner = document.getElementById('card-inner');
@@ -127,6 +133,9 @@ window.onload = function() {
         }
         if (favoritesTabContent.style.display !== 'none') {
             renderFavoritedContacts(); // Re-render the list if favorites tab is active
+        }
+        if (allContactsTabContent.style.display !== 'none') { // NEW: Re-render all contacts if that tab is active
+            renderAllContacts();
         }
     }
 
@@ -490,6 +499,79 @@ window.onload = function() {
         });
     }
 
+    // --- NEW: All Contacts List Logic ---
+    function renderAllContacts() {
+        allContactsList.innerHTML = ''; // Clear previous list
+
+        if (allContactsData.length === 0) {
+            noAllContactsMessage.style.display = 'block';
+            return;
+        } else {
+            noAllContactsMessage.style.display = 'none';
+        }
+
+        allContactsData.forEach(contact => {
+            const contactItem = document.createElement('div');
+            contactItem.className = 'contact-item bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between';
+
+            // Reusing the same structure as favorited contacts for consistency
+            contactItem.innerHTML = `
+                <div class="contact-details mb-2 sm:mb-0">
+                    <h3 class="text-xl font-semibold text-gray-800">${contact['display name']}</h3>
+                    ${contact.subtitle ? `<p class="text-md text-gray-500">${contact.subtitle}</p>` : ''}
+                    ${contact['contact number'] ? `<p class="text-sm text-gray-600 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>${contact['contact number']}</p>` : ''}
+                    ${contact.email ? `<p class="text-sm text-gray-600 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>${contact.email}</p>` : ''}
+                    ${contact.linkedin_id ? `<p class="text-sm text-gray-600 flex items-center"><svg class="h-4 w-4 mr-1 text-blue-700" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0zM7.35 20.47H3.66V9.1H7.35v11.37zM5.5 7.5a2 2 0 11-.01-4.01A2 2 0 015.5 7.5zm14.97 12.97h-3.69v-5.61c0-1.33-.02-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.96v5.7h-3.69V9.1h3.55v1.64h.05c.49-.93 1.68-1.9 3.48-1.9 3.73 0 4.42 2.45 4.42 5.63v6.05z"/></svg><a href="https://www.linkedin.com/in/${contact.linkedin_id}" target="_blank" class="text-blue-600 hover:underline">${contact.linkedin_id}</a></p>` : ''}
+                    ${contact.instagram_id ? `<p class="text-sm text-gray-600 flex items-center"><svg class="h-4 w-4 mr-1 text-pink-600" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.204-.012 3.584-.07 4.85-0.148 3.252-1.691 4.771-4.919 4.919-1.266.058-1.644.069-4.85.069s-3.584-.012-4.85-.07c-3.252-0.148-4.771-1.691-4.919-4.919-0.058-1.265-0.069-1.645-0.069-4.849 0-3.204.012-3.584.07-4.85 0.148-3.252 1.691-4.771 4.919-4.919 1.265-0.058 1.645-0.069 4.849-0.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.28.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.44-.645 1.44-1.44s-.645-1.44-1.44-1.44z"/></svg><a href="https://www.instagram.com/${contact.instagram_id}" target="_blank" class="text-blue-600 hover:underline">${contact.instagram_id}</a></p>` : ''}
+                </div>
+                <div class="contact-actions w-full sm:w-auto mt-2 sm:mt-0">
+                    <button class="favorite-toggle-btn px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600 transition duration-300 ease-in-out text-sm flex items-center justify-center" data-id="${contact.id}">
+                        <svg class="h-4 w-4 mr-1 favorite-icon" fill="${isContactFavorited(contact.id) ? 'gold' : 'currentColor'}" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M10 18.35L3.618 20l.707-7.071L.293 8.382l7.071-.707L10 1l2.626 6.674 7.071.707-4.032 4.547.707 7.071L10 18.35z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="favorite-text">${isContactFavorited(contact.id) ? 'Favorited' : 'Favorite'}</span>
+                    </button>
+                    <a href="#" class="view-card-link px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition duration-300 ease-in-out text-sm flex items-center justify-center" data-id="${contact.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                        </svg>
+                        View Card
+                    </a>
+                </div>
+            `;
+            allContactsList.appendChild(contactItem);
+        });
+
+        // Add event listeners to favorite toggle buttons in "All Contacts" tab
+        document.querySelectorAll('#all-contacts-list .favorite-toggle-btn').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const contactId = event.target.dataset.id || event.target.closest('button').dataset.id;
+                toggleContactFavorite(contactId);
+                // Update the button's state immediately after toggling
+                const icon = button.querySelector('.favorite-icon');
+                const text = button.querySelector('.favorite-text');
+                if (isContactFavorited(contactId)) {
+                    icon.setAttribute('fill', 'gold');
+                    text.textContent = 'Favorited';
+                } else {
+                    icon.setAttribute('fill', 'currentColor');
+                    text.textContent = 'Favorite';
+                }
+            });
+        });
+
+        // Add event listeners to view card links
+        document.querySelectorAll('#all-contacts-list .view-card-link').forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault(); // Prevent default link behavior
+                const contactId = event.target.dataset.id;
+                switchTab('contact-card'); // Switch to contact card tab
+                loadContactCard(contactId); // Load the specific contact
+            });
+        });
+    }
+
     // --- Data Fetching and Initialization ---
     async function fetchAndProcessData() {
         let dataSourcePromise;
@@ -597,10 +679,15 @@ window.onload = function() {
         tabContactCardBtn.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
         tabFavoritesBtn.classList.remove('border-blue-600', 'text-blue-600');
         tabFavoritesBtn.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+        // NEW: Deactivate All Contacts tab
+        tabAllContactsBtn.classList.remove('border-blue-600', 'text-blue-600');
+        tabAllContactsBtn.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
 
         // Hide all tab contents
         contactCardTabContent.style.display = 'none';
         favoritesTabContent.style.display = 'none';
+        // NEW: Hide All Contacts tab content
+        allContactsTabContent.style.display = 'none';
 
         // Activate the selected tab and show its content
         if (tabName === 'contact-card') {
@@ -612,6 +699,11 @@ window.onload = function() {
             tabFavoritesBtn.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
             favoritesTabContent.style.display = 'block';
             renderFavoritedContacts(); // Re-render favorites when tab is opened
+        } else if (tabName === 'all-contacts') { // NEW: Handle All Contacts tab
+            tabAllContactsBtn.classList.add('border-blue-600', 'text-blue-600');
+            tabAllContactsBtn.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            allContactsTabContent.style.display = 'block';
+            renderAllContacts(); // Render all contacts when tab is opened
         }
     }
 
@@ -647,6 +739,8 @@ window.onload = function() {
 
     tabContactCardBtn.addEventListener('click', () => switchTab('contact-card'));
     tabFavoritesBtn.addEventListener('click', () => switchTab('favorites'));
+    // NEW: Event Listener for All Contacts tab
+    tabAllContactsBtn.addEventListener('click', () => switchTab('all-contacts'));
 
     // Initial data fetch and display
     fetchAndProcessData();

@@ -167,6 +167,13 @@
                 <p id="qr-scan-status" class="text-sm text-gray-500 mt-2"></p>
             </div>
 
+            <div id="redirect-message" class="text-center mt-4 p-4 bg-blue-100 text-blue-800 rounded-lg" style="display: none;">
+                <p class="font-semibold">Redirecting to Google Form for editing contact details...</p>
+                <p id="countdown-timer" class="text-xl font-bold mt-2">5</p>
+                <p class="text-sm mt-2">If not redirected automatically, click the link below:</p>
+                <a id="edit-form-link" href="#" target="_blank" class="text-blue-600 hover:underline font-medium mt-1 inline-block">Click here to edit form</a>
+            </div>
+
             <div id="contact-card" class="contact-card" style="display: none">
                 <div id="card-inner" class="card-inner">
                     <div id="card-front" class="card-face card-front">
@@ -176,7 +183,7 @@
 
                     <div id="card-back" class="card-face card-back">
                         <h2 id="display-name-back" class="text-2xl font-bold text-gray-800 mb-4"></h2>
-                        
+
                         <p id="contact-number-row" class="text-lg text-gray-600 mb-2 flex items-center justify-center" style="display: none;">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />

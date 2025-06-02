@@ -1,15 +1,15 @@
-let html5QrCode = null; 
+let html5QrCode = null;
 let allContactsData = [];
 
-window.onload = function() { 
+window.onload = function() {
     // Set this to 'true' to use the hardcoded debug data below.
     // Set to 'false' to fetch from the Google Spreadsheet URL.
-    const DEBUG_MODE = false; 
+    const DEBUG_MODE = false;
 
     // IMPORTANT: Replace this URL with your actual Google Spreadsheet TSV URL.
     // This URL is only used if DEBUG_MODE is set to false.
     // Example format: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=tsv&gid=YOUR_SHEET_GID
-    const googleSpreadsheetTSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CVEFb-TyetHgpABQev94sh_DHclHh62O6_hJIzIoWB6hVxMS-hHvIDhbEGzwxPVnMRf9KXNyiokl/pub?output=tsv'; 
+    const googleSpreadsheetTSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CVEFb-TyetHgpABQev94sh_DHclHh62O6_hJIzIoWB6hVxMS-hHvIDhbEGzwxPVnMRf9KXNyiokl/pub?output=tsv';
     const headerMapping = {
         'Timestamp': 'timestamp',
         'ID': 'id',
@@ -46,7 +46,7 @@ window.onload = function() {
     const cardBack = document.getElementById('card-back');
     const notFoundDiv = document.getElementById('not-found');
     const errorMessageDiv = document.getElementById('error-message');
-    
+
     const displayNameFrontElem = document.getElementById('display-name-front');
     const subtitleFrontElem = document.getElementById('subtitle-front');
 
@@ -74,8 +74,13 @@ window.onload = function() {
     // --- QR Scan Elements ---
     const scanQrBtn = document.getElementById('scan-qr-btn');
     // Changed ID from 'my-qr-reader' to 'reader'
-    const qrReaderDiv = document.getElementById('reader'); 
+    const qrReaderDiv = document.getElementById('reader');
     const qrScanStatus = document.getElementById('qr-scan-status');
+
+    // --- New Redirect Message Elements ---
+    const redirectMessageDiv = document.getElementById('redirect-message');
+    const countdownTimerElem = document.getElementById('countdown-timer');
+    const editFormLinkElem = document.getElementById('edit-form-link');
 
 
     // --- Local Storage Functions for Favorites ---
@@ -118,7 +123,7 @@ window.onload = function() {
         saveFavoritedContactIds(favoritedIds);
         // Update button state if on contact card, re-render favorites list if on that tab
         if (currentContactData && currentContactData.id === id) {
-            updateFavoriteButtonState(id); 
+            updateFavoriteButtonState(id);
         }
         if (favoritesTabContent.style.display !== 'none') {
             renderFavoritedContacts(); // Re-render the list if favorites tab is active
@@ -194,7 +199,7 @@ window.onload = function() {
 
         const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `${name.replace(/\s+/g, '_')}.vcf`; // Sanitize filename
@@ -212,16 +217,17 @@ window.onload = function() {
         contactCard.style.display = 'none';
         notFoundDiv.style.display = 'none';
         errorMessageDiv.style.display = 'none';
+        redirectMessageDiv.style.display = 'none'; // Hide redirect message if scanner starts
 
         if (!html5QrCode) {
             // Initialize Html5Qrcode with the ID of the reader element
             html5QrCode = new Html5Qrcode("reader");
         }
-        
+
         // Configuration for the QR scanner
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 } 
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
         };
 
         // Start the QR code scanner preferring the back camera ('environment')
@@ -263,14 +269,20 @@ window.onload = function() {
             const scannedUrl = new URL(decodedText);
             const isSameOriginIgnoringProtocol = scannedUrl.hostname === window.location.hostname && scannedUrl.port === window.location.port;
             if (isSameOriginIgnoringProtocol) {
-                
+
                 const scannedId = scannedUrl.searchParams.get('id');
+                const editId = scannedUrl.searchParams.get('edit_id');
+
                 if (scannedId) {
                     qrScanStatus.style.display = 'none';
                     loadContactCard(scannedId);
                     switchTab('contact-card');
-                } else {
-                    qrScanStatus.textContent = "QR code is from this site but no 'id' parameter found.";
+                } else if (editId) {
+                    qrScanStatus.style.display = 'none';
+                    redirectToPrefilledForm(editId);
+                }
+                else {
+                    qrScanStatus.textContent = "QR code is from this site but no 'id' or 'edit_id' parameter found.";
                     showNotFoundMessage();
                 }
             } else {
@@ -296,12 +308,65 @@ window.onload = function() {
         }
     }
 
+    // New function to redirect to prefilled Google Form
+    function redirectToPrefilledForm(contactId) {
+        const contactToEdit = allContactsData.find(contact => contact.id === contactId);
+
+        if (!contactToEdit) {
+            showNotFoundMessage();
+            document.getElementById('contact-error-msg').textContent = `Contact with ID '${contactId}' not found in dataset.`;
+            return;
+        }
+
+        const googleFormBaseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdbWHo9YurZeDt809iKRf87mNaGLGWHEB35hPEmQjJmJx1MYg/viewform';
+        const entryIds = {
+            'id': 'entry.425553741',
+            'display name': 'entry.1611557554',
+            'subtitle': 'entry.1394933389',
+            'email': 'entry.1411329335',
+            'contact number': 'entry.285755920',
+            'linkedin_id': 'entry.76271349',
+            'instagram_id': 'entry.1255579483'
+        };
+
+        let prefilledUrl = `${googleFormBaseUrl}?usp=pp_url`;
+
+        for (const key in entryIds) {
+            const value = contactToEdit[key] || ''; // Use empty string for null/undefined values
+            prefilledUrl += `&${entryIds[key]}=${encodeURIComponent(value)}`;
+        }
+
+        // Display the contact card first
+        loadContactCard(contactId);
+        switchTab('contact-card');
+
+        // Show the redirect message and link
+        redirectMessageDiv.style.display = 'block';
+        editFormLinkElem.href = prefilledUrl;
+
+        let countdown = 5;
+        countdownTimerElem.textContent = countdown;
+
+        const interval = setInterval(() => {
+            countdown--;
+            countdownTimerElem.textContent = countdown;
+            if (countdown <= 0) {
+                clearInterval(interval);
+                redirectMessageDiv.style.display = 'none'; // Hide message after redirect
+                window.open(prefilledUrl, '_blank'); // Open in new tab
+            }
+        }, 1000);
+
+        console.log("Prefilled Google Form link generated:", prefilledUrl);
+    }
+
     // --- Contact Card Logic ---
     function loadContactCard(idToLoad) {
         // Reset card state
         contactCard.classList.remove('flipped');
         saveContactBtn.style.display = 'none';
         favoriteBtn.style.display = 'none';
+        redirectMessageDiv.style.display = 'none'; // Hide redirect message if a new card is loaded
 
         const foundContact = allContactsData.find(contact => contact.id === idToLoad)
 
@@ -353,7 +418,7 @@ window.onload = function() {
             contactCard.style.display = 'block';
             notFoundDiv.style.display = 'none';
             errorMessageDiv.style.display = 'none';
-            
+
             updateFavoriteButtonState(currentContactData.id); // Update favorite button for this contact
 
         } else {
@@ -383,7 +448,7 @@ window.onload = function() {
         favoritedContacts.forEach(contact => {
             const contactItem = document.createElement('div');
             contactItem.className = 'contact-item bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between';
-            
+
             contactItem.innerHTML = `
                 <div class="contact-details mb-2 sm:mb-0">
                     <h3 class="text-xl font-semibold text-gray-800">${contact['display name']}</h3>
@@ -482,11 +547,11 @@ window.onload = function() {
                     const availableIds = allContactsData.map(c => c.id);
                     const idsToFavorite = [];
                     // Ensure we don't try to favorite more contacts than available
-                    const numContactsToFavorite = Math.min(4, availableIds.length); 
+                    const numContactsToFavorite = Math.min(4, availableIds.length);
 
                     // Randomly select contacts to favorite
                     // Create a copy of availableIds to avoid modifying the original during selection
-                    let tempAvailableIds = [...availableIds]; 
+                    let tempAvailableIds = [...availableIds];
                     while (idsToFavorite.length < numContactsToFavorite && tempAvailableIds.length > 0) {
                         const randomIndex = Math.floor(Math.random() * tempAvailableIds.length);
                         const randomId = tempAvailableIds[randomIndex];
@@ -500,20 +565,24 @@ window.onload = function() {
 
                 // Get the 'id' from the URL query parameters
                 let idFromUrl = new URLSearchParams(window.location.search).get('id');
+                let editIdFromUrl = new URLSearchParams(window.location.search).get('edit_id');
 
                 // If DEBUG_MODE is true and no ID is provided in the URL, default to '1'
-                if (DEBUG_MODE && !idFromUrl) {
+                if (DEBUG_MODE && !idFromUrl && !editIdFromUrl) {
                     idFromUrl = '1';
-                    console.log("DEBUG_MODE: No ID found in URL, defaulting to ID '1'.");
+                    console.log("DEBUG_MODE: No ID or Edit ID found in URL, defaulting to ID '1'.");
                 }
 
                 if (idFromUrl) {
                     console.log(`Loading contact card for ID: ${idFromUrl}`);
                     console.log("All Contacts Data:", allContactsData);
                     loadContactCard(idFromUrl);
+                } else if (editIdFromUrl) {
+                    console.log(`Redirecting to Google Form for ID: ${editIdFromUrl}`);
+                    redirectToPrefilledForm(editIdFromUrl);
                 } else {
                     // If no ID is provided and not in debug mode, or no default, show not found
-                    console.log("No id provided and not in debug mode");
+                    console.log("No id or edit_id provided and not in debug mode");
                 }
             })
             .catch(error => {
@@ -575,7 +644,7 @@ window.onload = function() {
         }
     });
 
-    scanQrBtn.addEventListener('click', startQrScanner); 
+    scanQrBtn.addEventListener('click', startQrScanner);
 
     tabContactCardBtn.addEventListener('click', () => switchTab('contact-card'));
     tabFavoritesBtn.addEventListener('click', () => switchTab('favorites'));

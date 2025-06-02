@@ -365,6 +365,9 @@ window.onload = function() {
         redirectMessageDiv.style.display = 'none'; // Hide redirect message if a new card is loaded
 
         const foundContact = allContactsData.find(contact => contact.id === idToLoad)
+        if (!foundContact) {
+            fetchAndProcessData(); // Fetch data if not found
+        }
 
 
         if (foundContact) {

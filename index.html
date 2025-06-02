@@ -3,208 +3,668 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Redirector</title>
+    <title>Contact Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for the Inter font and overall layout */
+        /* Custom styles for Inter font and general body layout */
         body {
             font-family: 'Inter', sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column; /* Allow vertical stacking for tabs and content */
+            justify-content: flex-start; /* Align content to the top */
             align-items: center;
             min-height: 100vh;
-            background-color: #f0f4f8; /* Light blue-gray background */
+            background-color: #f0f2f5; /* Light gray background */
             margin: 0;
-            padding: 20px; /* Add some padding around the content */
+            padding: 20px; /* Add some padding for smaller screens */
             box-sizing: border-box; /* Include padding in element's total width and height */
         }
-        .container {
-            max-width: 600px;
+        /* Main container for the whole application */
+        .app-container {
+            max-width: 800px; /* Wider for favorites list */
             width: 100%;
-            background-color: #ffffff; /* White background for the container */
-            padding: 32px; /* Ample padding */
-            border-radius: 12px; /* Rounded corners */
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 5px 15px -5px rgba(0, 0, 0, 0.04); /* Soft shadow */
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        /* Styles for the 3D flip effect (for the individual contact card) */
+        .contact-card {
+            perspective: 1000px; /* For 3D effect */
+            width: 100%;
+            height: 300px; /* Fixed height for consistent flip, adjust as needed */
+            position: relative;
+            cursor: pointer; /* Indicate it's clickable */
+            margin-bottom: 20px; /* Space below the card */
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
             text-align: center;
+            transition: transform 0.6s; /* Smooth transition for the flip */
+            transform-style: preserve-3d; /* Preserve 3D space for children */
         }
-        /* Style for the loading spinner */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #3b82f6; /* Blue spinner color */
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px auto; /* Center spinner and add margin below */
+
+        /* When the card is 'flipped', rotate the inner container */
+        .contact-card.flipped .card-inner {
+            transform: rotateY(180deg);
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Hide the back of the element when facing away */
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+
+        .card-front {
+            /* Styles specific to the front face */
+            color: #333;
+        }
+
+        .card-back {
+            /* Styles specific to the back face */
+            color: #333;
+            transform: rotateY(180deg); /* Initially rotated to be hidden */
+            /* Ensure content is centered vertically and horizontally */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Specific styles for elements on the back */
+        .card-back p {
+            margin: 5px 0; /* Adjust spacing for details */
+        }
+
+        /* Styles for favorited contacts list */
+        .contact-item {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 0;
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px; /* Space between items */
+        }
+        .contact-item:last-child {
+            border-bottom: none;
+        }
+        .contact-details {
+            flex-grow: 1; /* Allow details to take available space */
+            text-align: left;
+        }
+        .contact-details p {
+            margin: 2px 0;
+        }
+        .contact-actions {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0; /* Prevent actions from shrinking */
         }
     </style>
 </head>
 <body>
-    <div id="app" class="container flex flex-col items-center justify-center">
-        <div id="loading-spinner" class="spinner"></div>
-        <p id="message" class="text-lg text-gray-700 mt-4">Attempting to redirect...</p>
+    <div class="app-container">
+        <div class="flex justify-center mb-6 border-b border-gray-200">
+            <button id="tab-contact-card" class="py-3 px-6 text-lg font-medium text-blue-600 border-b-2 border-blue-600 focus:outline-none">
+                Contact Card
+            </button>
+            <button id="tab-favorites" class="py-3 px-6 text-lg font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none">
+                Favorited Contacts
+            </button>
+        </div>
+
+        <div id="contact-card-tab-content" class="tab-content">
+            <div id="contact-card" class="contact-card">
+                <div id="card-inner" class="card-inner">
+                    <div id="card-front" class="card-face card-front">
+                        <h2 id="display-name-front" class="text-3xl font-bold text-gray-800 mb-2">Loading Contact...</h2>
+                        <p id="subtitle-front" class="text-xl text-gray-600"></p>
+                    </div>
+
+                    <div id="card-back" class="card-face card-back">
+                        <h2 id="display-name-back" class="text-2xl font-bold text-gray-800 mb-4"></h2>
+                        
+                        <p id="contact-number-row" class="text-lg text-gray-600 mb-2 flex items-center justify-center" style="display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                            </svg>
+                            <strong class="font-semibold">Contact:</strong> <span id="contact-number" class="ml-2"></span>
+                        </p>
+
+                        <p id="email-row" class="text-lg text-gray-600 mb-2 flex items-center justify-center" style="display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            <strong class="font-semibold">Email:</strong> <span id="email" class="ml-2"></span>
+                        </p>
+
+                        <p id="linkedin-row" class="text-lg text-gray-600 mb-2 flex items-center justify-center" style="display: none;">
+                            <svg class="h-5 w-5 mr-2 text-blue-700" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0zM7.35 20.47H3.66V9.1H7.35v11.37zM5.5 7.5a2 2 0 11-.01-4.01A2 2 0 015.5 7.5zm14.97 12.97h-3.69v-5.61c0-1.33-.02-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.96v5.7h-3.69V9.1h3.55v1.64h.05c.49-.93 1.68-1.9 3.48-1.9 3.73 0 4.42 2.45 4.42 5.63v6.05z"/>
+                            </svg>
+                            <a id="linkedin-link" href="#" target="_blank" class="text-blue-600 hover:underline ml-2"></a>
+                        </p>
+
+                        <p id="instagram-row" class="text-lg text-gray-600 mb-2 flex items-center justify-center" style="display: none;">
+                            <svg class="h-5 w-5 mr-2 text-pink-600" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.204-.012 3.584-.07 4.85-0.148 3.252-1.691 4.771-4.919 4.919-1.266.058-1.644.069-4.85.069s-3.584-.012-4.85-.07c-3.252-0.148-4.771-1.691-4.919-4.919-0.058-1.265-0.069-1.645-0.069-4.849 0-3.204.012-3.584.07-4.85 0.148-3.252 1.691-4.771 4.919-4.919 1.265-0.058 1.645-0.069 4.849-0.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.28.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.44-.645 1.44-1.44s-.645-1.44-1.44-1.44z"/>
+                            </svg>
+                            <a id="instagram-link" href="#" target="_blank" class="text-blue-600 hover:underline ml-2"></a>
+                        </p>
+
+                        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 w-full">
+                            <button id="favorite-btn" class="px-6 py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center justify-center" style="display: none;">
+                                <svg id="favorite-icon" class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M10 18.35L3.618 20l.707-7.071L.293 8.382l7.071-.707L10 1l2.626 6.674 7.071.707-4.032 4.547.707 7.071L10 18.35z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span id="favorite-text">Favorite</span>
+                            </button>
+
+                            <button id="save-contact-btn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out flex items-center justify-center" style="display: none;">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L6.293 6.707z" clip-rule="evenodd" />
+                                </svg>
+                                Save Contact
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="not-found" class="not-found text-red-600 text-xl font-semibold mt-8" style="display: none;">
+                <p>Contact not found or invalid ID.</p>
+                <p class="text-base text-gray-500 mt-2">Please check the ID in the URL (e.g., `?id=1`).</p>
+            </div>
+
+            <div id="error-message" class="error-message text-red-600 text-xl font-semibold mt-8" style="display: none;">
+                <p>An error occurred while loading data.</p>
+                <p class="text-base text-gray-500 mt-2">Please check your Google Spreadsheet URL or try again later.</p>
+            </div>
+        </div>
+
+        <div id="favorites-tab-content" class="tab-content" style="display: none;">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Favorited Contacts</h1>
+            <div id="favorited-contacts-list" class="space-y-4">
+                </div>
+            <p id="no-favorites-message" class="text-gray-600 text-center mt-8" style="display: none;">No contacts have been favorited yet.</p>
+        </div>
     </div>
 
     <script>
-        // Define the URL of your published Google Sheet CSV file.
-        // IMPORTANT: You MUST replace 'YOUR_GOOGLE_SHEET_CSV_URL_HERE' with the actual URL you copied
-        // from Google Sheets after publishing your sheet to the web as a CSV.
-        // Example: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR.../pub?output=csv'
-        const GOOGLE_SHEET_CSV_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set this to 'true' to use the hardcoded debug data below.
+            // Set to 'false' to fetch from the Google Spreadsheet URL.
+            const DEBUG_MODE = true; 
 
-        const messageElement = document.getElementById('message');
-        const spinnerElement = document.getElementById('loading-spinner');
+            // IMPORTANT: Replace this URL with your actual Google Spreadsheet JSON URL.
+            // This URL is only used if DEBUG_MODE is set to false.
+            // Example format: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/gviz/tq?tqx=out:json&gid=YOUR_SHEET_GID
+            const googleSpreadsheetJsonUrl = 'YOUR_GOOGLE_SPREADSHEET_JSON_URL_HERE'; 
 
-        /**
-         * Displays a message to the user and hides the loading spinner.
-         * @param {string} msg The message to display.
-         * @param {string} type The type of message ('success', 'error', 'info').
-         */
-        function displayMessage(msg, type = 'info') {
-            messageElement.textContent = msg;
-            spinnerElement.classList.add('hidden'); // Hide the spinner
+            // Debug data in JSON format (mimics the structure we want after parsing)
+            const debugJsonData = [
+                { id: '1', 'display name': 'Alice Wonderland', subtitle: 'Curious Explorer', 'contact number': '111-222-3333', email: 'alice@example.com', linkedin_id: 'alice_w', instagram_id: 'alice_insta' },
+                { id: '2', 'display name': 'Bob The Builder', subtitle: 'Can We Fix It?', 'contact number': '', email: 'bob@example.com', linkedin_id: '', instagram_id: 'bob_builds' },
+                { id: '3', 'display name': 'Charlie Chaplin', subtitle: 'The Little Tramp', 'contact number': '444-555-6666', email: '', linkedin_id: '', instagram_id: '' },
+                { id: '4', 'display name': 'Diana Prince', subtitle: 'Amazonian Warrior', 'contact number': '555-123-4567', email: 'diana@example.com', linkedin_id: 'diana_p', instagram_id: 'wonder_woman' },
+                { id: '5', 'display name': 'Ethan Hunt', subtitle: 'Impossible Missions', 'contact number': '888-999-0000', email: 'ethan@example.com', linkedin_id: 'ethan_h', instagram_id: 'imf_agent' },
+                { id: '6', 'display name': 'Fiona Shrek', subtitle: 'Ogre Princess', 'contact number': '777-666-5555', email: 'fiona@example.com', linkedin_id: 'fiona_s', instagram_id: 'ogre_princess' },
+                { id: '7', 'display name': 'Groot', subtitle: 'I Am Groot', 'contact number': '101-202-3030', email: 'groot@example.com', linkedin_id: '', instagram_id: 'we_are_groot' }
+            ];
 
-            // Apply styling based on message type
-            messageElement.classList.remove('text-gray-700', 'text-red-500', 'text-green-500');
-            if (type === 'error') {
-                messageElement.classList.add('text-red-500');
-            } else if (type === 'success') {
-                messageElement.classList.add('text-green-500');
-            } else {
-                messageElement.classList.add('text-gray-700');
-            }
-        }
+            // --- Tab Elements ---
+            const tabContactCardBtn = document.getElementById('tab-contact-card');
+            const tabFavoritesBtn = document.getElementById('tab-favorites');
+            const contactCardTabContent = document.getElementById('contact-card-tab-content');
+            const favoritesTabContent = document.getElementById('favorites-tab-content');
 
-        /**
-         * Fetches the CSV data from the specified Google Sheet URL.
-         * @returns {Promise<string>} A promise that resolves with the CSV text.
-         */
-        async function fetchCsvData() {
-            try {
-                // Ensure the URL is valid before attempting to fetch
-                new URL(GOOGLE_SHEET_CSV_URL); // This will throw a TypeError if the URL is malformed
-                const response = await fetch(GOOGLE_SHEET_CSV_URL);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            // --- Contact Card Elements ---
+            const contactCard = document.getElementById('contact-card');
+            const cardInner = document.getElementById('card-inner');
+            const cardFront = document.getElementById('card-front');
+            const cardBack = document.getElementById('card-back');
+            const notFoundDiv = document.getElementById('not-found');
+            const errorMessageDiv = document.getElementById('error-message');
+            
+            const displayNameFrontElem = document.getElementById('display-name-front');
+            const subtitleFrontElem = document.getElementById('subtitle-front');
+
+            const displayNameBackElem = document.getElementById('display-name-back');
+            const contactNumberRow = document.getElementById('contact-number-row');
+            const contactNumberElem = document.getElementById('contact-number');
+            const emailRow = document.getElementById('email-row');
+            const emailElem = document.getElementById('email');
+            const linkedinRow = document.getElementById('linkedin-row');
+            const linkedinLink = document.getElementById('linkedin-link');
+            const instagramRow = document.getElementById('instagram-row');
+            const instagramLink = document.getElementById('instagram-link');
+            const saveContactBtn = document.getElementById('save-contact-btn');
+            const favoriteBtn = document.getElementById('favorite-btn');
+            const favoriteIcon = document.getElementById('favorite-icon');
+            const favoriteText = document.getElementById('favorite-text');
+
+            let currentContactData = null; // Store the fetched contact data for the contact card view
+            let allContactsData = []; // Store all contacts data once fetched
+
+            // --- Favorites List Elements ---
+            const favoritedContactsList = document.getElementById('favorited-contacts-list');
+            const noFavoritesMessage = document.getElementById('no-favorites-message');
+
+
+            // --- Local Storage Functions for Favorites ---
+            const FAVORITES_STORAGE_KEY = 'favoritedContactIds';
+
+            function getFavoritedContactIds() {
+                try {
+                    const storedIds = localStorage.getItem(FAVORITES_STORAGE_KEY);
+                    return storedIds ? JSON.parse(storedIds) : [];
+                } catch (e) {
+                    console.error("Error reading from local storage:", e);
+                    return [];
                 }
-                return await response.text();
-            } catch (error) {
-                console.error('Error fetching CSV data:', error);
-                // Provide a more specific message if the URL is the placeholder
-                if (GOOGLE_SHEET_CSV_URL === 'YOUR_GOOGLE_SHEET_CSV_URL_HERE') {
-                    displayMessage('Please replace "YOUR_GOOGLE_SHEET_CSV_URL_HERE" with your actual Google Sheet CSV URL.', 'error');
+            }
+
+            function saveFavoritedContactIds(ids) {
+                try {
+                    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(ids));
+                } catch (e) {
+                    console.error("Error writing to local storage:", e);
+                }
+            }
+
+            function isContactFavorited(id) {
+                const favoritedIds = getFavoritedContactIds();
+                return favoritedIds.includes(id);
+            }
+
+            function toggleContactFavorite(id) {
+                let favoritedIds = getFavoritedContactIds();
+                if (favoritedIds.includes(id)) {
+                    // Remove from favorites
+                    favoritedIds = favoritedIds.filter(favId => favId !== id);
+                    console.log(`Unfavorited contact ID: ${id}`);
                 } else {
-                    displayMessage('Failed to load redirection data. Please check the Google Sheet URL and its publish settings.', 'error');
+                    // Add to favorites
+                    favoritedIds.push(id);
+                    console.log(`Favorited contact ID: ${id}`);
                 }
-                return null;
-            }
-        }
-
-        /**
-         * Parses CSV text into an array of objects.
-         * Assumes the first row is the header.
-         * @param {string} csvText The CSV data as a string.
-         * @returns {Array<Object>} An array of objects, where each object represents a row.
-         */
-        function parseCsv(csvText) {
-            const lines = csvText.trim().split('\n');
-            if (lines.length === 0) {
-                return [];
+                saveFavoritedContactIds(favoritedIds);
+                // Update button state if on contact card, re-render favorites list if on that tab
+                if (currentContactData && currentContactData.id === id) {
+                    updateFavoriteButtonState(id); 
+                }
+                if (favoritesTabContent.style.display !== 'none') {
+                    renderFavoritedContacts(); // Re-render the list if favorites tab is active
+                }
             }
 
-            // Split by comma, but handle quoted commas if necessary (simple split for now)
-            const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
-            const data = [];
+            function updateFavoriteButtonState(contactId) {
+                if (isContactFavorited(contactId)) {
+                    favoriteIcon.setAttribute('fill', 'gold'); // Filled star
+                    favoriteText.textContent = 'Favorited';
+                    favoriteBtn.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+                    favoriteBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+                } else {
+                    favoriteIcon.setAttribute('fill', 'currentColor'); // Outline star (default color)
+                    favoriteText.textContent = 'Favorite';
+                    favoriteBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                    favoriteBtn.classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
+                }
+            }
+            // --- End Local Storage Functions ---
 
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
-                const row = {};
-                headers.forEach((header, index) => {
-                    row[header] = values[index] ? values[index].trim() : ''; // Trim whitespace
+
+            // --- General UI Functions ---
+            function showErrorMessage(message) {
+                contactCardTabContent.style.display = 'block'; // Ensure card content is visible for error
+                contactCard.style.display = 'none';
+                notFoundDiv.style.display = 'none';
+                errorMessageDiv.style.display = 'block';
+                errorMessageDiv.querySelector('p:first-child').textContent = message;
+                saveContactBtn.style.display = 'none'; // Hide buttons on error
+                favoriteBtn.style.display = 'none';
+            }
+
+            function showNotFoundMessage() {
+                contactCardTabContent.style.display = 'block'; // Ensure card content is visible for not found
+                contactCard.style.display = 'none';
+                errorMessageDiv.style.display = 'none';
+                notFoundDiv.style.display = 'block';
+                saveContactBtn.style.display = 'none'; // Hide buttons on not found
+                favoriteBtn.style.display = 'none';
+            }
+
+            // Function to generate and download vCard
+            function generateVCard() {
+                if (!currentContactData) {
+                    console.error("No contact data available to generate vCard.");
+                    return;
+                }
+
+                const name = currentContactData['display name'] || 'Unknown Contact';
+                const tel = currentContactData['contact number'] || '';
+                const email = currentContactData.email || '';
+                const linkedinId = currentContactData.linkedin_id || '';
+                const instagramId = currentContactData.instagram_id || '';
+
+                let vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\n`;
+
+                if (tel) {
+                    vcard += `TEL;TYPE=WORK,VOICE:${tel}\n`;
+                }
+                if (email) {
+                    vcard += `EMAIL;TYPE=INTERNET:${email}\n`;
+                }
+                if (linkedinId) {
+                    vcard += `URL;TYPE=LinkedIn:https://www.linkedin.com/in/${linkedinId}\n`;
+                }
+                if (instagramId) {
+                    vcard += `URL;TYPE=Instagram:https://www.instagram.com/${instagramId}\n`;
+                }
+                vcard += `END:VCARD`;
+
+                const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${name.replace(/\s+/g, '_')}.vcf`; // Sanitize filename
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url); // Clean up the URL object
+            }
+
+            // --- Contact Card Logic ---
+            function loadContactCard(idToLoad) {
+                // Reset card state
+                contactCard.classList.remove('flipped');
+                saveContactBtn.style.display = 'none';
+                favoriteBtn.style.display = 'none';
+
+                const foundContact = allContactsData.find(contact => contact.id === idToLoad);
+
+                if (foundContact) {
+                    currentContactData = foundContact; // Store the data
+
+                    // Populate front of the card
+                    displayNameFrontElem.textContent = foundContact['display name'];
+                    subtitleFrontElem.textContent = foundContact['subtitle'] || '';
+
+                    // Populate back of the card
+                    displayNameBackElem.textContent = foundContact['display name'];
+
+                    // Conditionally display contact number
+                    if (foundContact['contact number']) {
+                        contactNumberElem.textContent = foundContact['contact number'];
+                        contactNumberRow.style.display = 'flex';
+                    } else {
+                        contactNumberRow.style.display = 'none';
+                    }
+
+                    // Conditionally display email
+                    if (foundContact.email) {
+                        emailElem.textContent = foundContact.email;
+                        emailRow.style.display = 'flex';
+                    } else {
+                        emailRow.style.display = 'none';
+                    }
+
+                    // Conditionally display LinkedIn
+                    if (foundContact.linkedin_id) {
+                        linkedinLink.textContent = foundContact.linkedin_id;
+                        linkedinLink.href = `https://www.linkedin.com/in/${foundContact.linkedin_id}`;
+                        linkedinRow.style.display = 'flex';
+                    } else {
+                        linkedinRow.style.display = 'none';
+                    }
+
+                    // Conditionally display Instagram
+                    if (foundContact.instagram_id) {
+                        instagramLink.textContent = foundContact.instagram_id;
+                        instagramLink.href = `https://www.instagram.com/${foundContact.instagram_id}`;
+                        instagramRow.style.display = 'flex';
+                    } else {
+                        instagramRow.style.display = 'none';
+                    }
+
+                    contactCard.style.display = 'block';
+                    notFoundDiv.style.display = 'none';
+                    errorMessageDiv.style.display = 'none';
+                    
+                    updateFavoriteButtonState(currentContactData.id); // Update favorite button for this contact
+
+                } else {
+                    showNotFoundMessage();
+                }
+            }
+
+            // --- Favorites List Logic ---
+            function renderFavoritedContacts() {
+                favoritedContactsList.innerHTML = ''; // Clear previous list
+                const favoritedIds = getFavoritedContactIds();
+
+                if (favoritedIds.length === 0) {
+                    noFavoritesMessage.style.display = 'block';
+                    return;
+                } else {
+                    noFavoritesMessage.style.display = 'none';
+                }
+
+                const favoritedContacts = allContactsData.filter(contact => favoritedIds.includes(contact.id));
+
+                if (favoritedContacts.length === 0) {
+                    noFavoritesMessage.style.display = 'block';
+                    return;
+                }
+
+                favoritedContacts.forEach(contact => {
+                    const contactItem = document.createElement('div');
+                    contactItem.className = 'contact-item bg-gray-50 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between';
+                    
+                    contactItem.innerHTML = `
+                        <div class="contact-details mb-2 sm:mb-0">
+                            <h3 class="text-xl font-semibold text-gray-800">${contact['display name']}</h3>
+                            ${contact.subtitle ? `<p class="text-md text-gray-500">${contact.subtitle}</p>` : ''}
+                            ${contact['contact number'] ? `<p class="text-sm text-gray-600 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>${contact['contact number']}</p>` : ''}
+                            ${contact.email ? `<p class="text-sm text-gray-600 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>${contact.email}</p>` : ''}
+                            ${contact.linkedin_id ? `<p class="text-sm text-gray-600 flex items-center"><svg class="h-4 w-4 mr-1 text-blue-700" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0zM7.35 20.47H3.66V9.1H7.35v11.37zM5.5 7.5a2 2 0 11-.01-4.01A2 2 0 015.5 7.5zm14.97 12.97h-3.69v-5.61c0-1.33-.02-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.96v5.7h-3.69V9.1h3.55v1.64h.05c.49-.93 1.68-1.9 3.48-1.9 3.73 0 4.42 2.45 4.42 5.63v6.05z"/></svg><a href="https://www.linkedin.com/in/${contact.linkedin_id}" target="_blank" class="text-blue-600 hover:underline">${contact.linkedin_id}</a></p>` : ''}
+                            ${contact.instagram_id ? `<p class="text-sm text-gray-600 flex items-center"><svg class="h-4 w-4 mr-1 text-pink-600" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.204-.012 3.584-.07 4.85-0.148 3.252-1.691 4.771-4.919 4.919-1.266.058-1.644.069-4.85.069s-3.584-.012-4.85-.07c-3.252-0.148-4.771-1.691-4.919-4.919-0.058-1.265-0.069-1.645-0.069-4.849 0-3.204.012-3.584.07-4.85 0.148-3.252 1.691-4.771 4.919-4.919 1.265-0.058 1.645-0.069 4.849-0.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.28.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.44-.645 1.44-1.44s-.645-1.44-1.44-1.44z"/></svg><a href="https://www.instagram.com/${contact.instagram_id}" target="_blank" class="text-blue-600 hover:underline">${contact.instagram_id}</a></p>` : ''}
+                        </div>
+                        <div class="contact-actions w-full sm:w-auto mt-2 sm:mt-0">
+                            <button class="unfavorite-btn px-4 py-2 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition duration-300 ease-in-out text-sm" data-id="${contact.id}">Unfavorite</button>
+                            <a href="#" class="view-card-link px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition duration-300 ease-in-out text-sm flex items-center justify-center" data-id="${contact.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                                </svg>
+                                View Card
+                            </a>
+                        </div>
+                    `;
+                    favoritedContactsList.appendChild(contactItem);
                 });
-                data.push(row);
+
+                // Add event listeners to unfavorite buttons
+                document.querySelectorAll('.unfavorite-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const contactId = event.target.dataset.id;
+                        toggleContactFavorite(contactId);
+                    });
+                });
+
+                // Add event listeners to view card links
+                document.querySelectorAll('.view-card-link').forEach(link => {
+                    link.addEventListener('click', (event) => {
+                        event.preventDefault(); // Prevent default link behavior
+                        const contactId = event.target.dataset.id;
+                        switchTab('contact-card'); // Switch to contact card tab
+                        loadContactCard(contactId); // Load the specific contact
+                    });
+                });
             }
-            return data;
-        }
 
-        /**
-         * Extracts the short path from the current URL.
-         * Handles both root-level GitHub Pages (username.github.io/short-path)
-         * and project-level GitHub Pages (username.github.io/repo-name/short-path).
-         * @returns {string} The extracted short path.
-         */
-        function getShortPathFromUrl() {
-            // Get the full path, e.g., "/your-repo/short-path" or "/short-path"
-            const pathname = window.location.pathname;
+            // --- Data Fetching and Initialization ---
+            function fetchAndProcessData() {
+                let dataSourcePromise;
+                if (DEBUG_MODE) {
+                    dataSourcePromise = Promise.resolve(debugJsonData); // Directly use debug JSON data
+                } else {
+                    dataSourcePromise = fetch(googleSpreadsheetJsonUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}. Check if the spreadsheet URL is correct and published publicly.`);
+                            }
+                            return response.text(); // Get as text first to handle gviz wrapper
+                        })
+                        .then(jsonText => {
+                            // Google Sheets API returns JSON with a 'google.visualization.Query.setResponse(' wrapper
+                            // We need to strip this wrapper
+                            const startIndex = jsonText.indexOf('(') + 1;
+                            const endIndex = jsonText.lastIndexOf(')');
+                            const jsonString = jsonText.substring(startIndex, endIndex);
+                            const jsonData = JSON.parse(jsonString);
 
-            // Split the pathname by '/' and filter out empty strings
-            const pathSegments = pathname.split('/').filter(segment => segment);
-
-            // If there are segments, the last one is likely the short path.
-            // If it's a root-level page or a repo with no specific path, it might be empty.
-            // Example: "username.github.io/my-repo/" -> pathSegments = ["my-repo"]
-            // Example: "username.github.io/my-repo/blog" -> pathSegments = ["my-repo", "blog"]
-            // Example: "username.github.io/blog" (user page) -> pathSegments = ["blog"]
-
-            // Determine if it's a project page (e.g., /repo-name/...) or a user page (e.g., /...)
-            // A simple heuristic: if the first segment matches the repository name, it's a project page.
-            // This is not foolproof but works for common GitHub Pages setups.
-            const repoName = window.location.hostname.includes('.github.io') ?
-                             window.location.pathname.split('/')[1] : '';
-
-            let shortPath = '';
-            if (repoName && pathSegments[0] === repoName) {
-                // It's a project page, so the short path is the segment after the repo name
-                if (pathSegments.length > 1) {
-                    shortPath = pathSegments[1];
+                            if (jsonData.table && jsonData.table.cols && jsonData.table.rows) {
+                                const headers = jsonData.table.cols.map(col => col.label);
+                                return jsonData.table.rows.map(row => {
+                                    const rowObject = {};
+                                    row.c.forEach((cell, index) => {
+                                        // 'v' is the value, 'f' is formatted value (if any)
+                                        rowObject[headers[index]] = cell && cell.v !== null ? String(cell.v) : '';
+                                    });
+                                    return rowObject;
+                                });
+                            } else {
+                                throw new Error("Invalid JSON structure from Google Spreadsheet API.");
+                            }
+                        });
                 }
-            } else {
-                // It's a user/organization page or a direct path, so the first segment is the short path
-                if (pathSegments.length > 0) {
-                    shortPath = pathSegments[0];
+
+                dataSourcePromise
+                    .then(processedData => {
+                        allContactsData = processedData; // Assign processed data
+                        // --- Debug Mode: Seed Favorites ---
+                        if (DEBUG_MODE && getFavoritedContactIds().length === 0) {
+                            const availableIds = allContactsData.map(c => c.id);
+                            const idsToFavorite = [];
+                            // Ensure we don't try to favorite more contacts than available
+                            const numContactsToFavorite = Math.min(4, availableIds.length); 
+
+                            // Randomly select contacts to favorite
+                            // Create a copy of availableIds to avoid modifying the original during selection
+                            let tempAvailableIds = [...availableIds]; 
+                            while (idsToFavorite.length < numContactsToFavorite && tempAvailableIds.length > 0) {
+                                const randomIndex = Math.floor(Math.random() * tempAvailableIds.length);
+                                const randomId = tempAvailableIds[randomIndex];
+                                idsToFavorite.push(randomId);
+                                tempAvailableIds.splice(randomIndex, 1); // Remove selected ID to avoid duplicates
+                            }
+                            saveFavoritedContactIds(idsToFavorite);
+                            console.log("DEBUG_MODE: Seeded favorites with IDs:", idsToFavorite);
+                        }
+                        // --- End Debug Mode: Seed Favorites ---
+
+                        // Get the 'id' from the URL query parameters
+                        let idFromUrl = new URLSearchParams(window.location.search).get('id');
+
+                        // If DEBUG_MODE is true and no ID is provided in the URL, default to '1'
+                        if (DEBUG_MODE && !idFromUrl) {
+                            idFromUrl = '1';
+                            console.log("DEBUG_MODE: No ID found in URL, defaulting to ID '1'.");
+                        }
+
+                        if (idFromUrl) {
+                            loadContactCard(idFromUrl);
+                        } else {
+                            // If no ID is provided and not in debug mode, or no default, show not found
+                            showNotFoundMessage();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showErrorMessage(`Failed to load data: ${error.message}`);
+                    });
+            }
+
+            // --- Tab Switching Logic ---
+            function switchTab(tabName) {
+                // Deactivate all tabs
+                tabContactCardBtn.classList.remove('border-blue-600', 'text-blue-600');
+                tabContactCardBtn.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                tabFavoritesBtn.classList.remove('border-blue-600', 'text-blue-600');
+                tabFavoritesBtn.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+
+                // Hide all tab contents
+                contactCardTabContent.style.display = 'none';
+                favoritesTabContent.style.display = 'none';
+
+                // Activate the selected tab and show its content
+                if (tabName === 'contact-card') {
+                    tabContactCardBtn.classList.add('border-blue-600', 'text-blue-600');
+                    tabContactCardBtn.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    contactCardTabContent.style.display = 'block';
+                } else if (tabName === 'favorites') {
+                    tabFavoritesBtn.classList.add('border-blue-600', 'text-blue-600');
+                    tabFavoritesBtn.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    favoritesTabContent.style.display = 'block';
+                    renderFavoritedContacts(); // Re-render favorites when tab is opened
                 }
             }
 
-            return shortPath;
-        }
+            // --- Event Listeners ---
+            saveContactBtn.addEventListener('click', generateVCard);
 
-        /**
-         * Main function to fetch data and perform redirection.
-         */
-        async function initRedirect() {
-            const csvText = await fetchCsvData();
-            if (!csvText) {
-                return; // Exit if CSV data couldn't be fetched
-            }
+            favoriteBtn.addEventListener('click', () => {
+                if (currentContactData && currentContactData.id) {
+                    toggleContactFavorite(currentContactData.id);
+                }
+            });
 
-            const redirectMap = parseCsv(csvText);
-            const currentShortPath = getShortPathFromUrl();
+            contactCard.addEventListener('click', (event) => {
+                // Prevent flipping if the click originated from a button itself or its children
+                if (event.target === saveContactBtn || event.target === favoriteBtn || saveContactBtn.contains(event.target) || favoriteBtn.contains(event.target)) {
+                    return;
+                }
+                // Only allow flipping if a contact is loaded and no error/not found is showing
+                if (currentContactData) {
+                    contactCard.classList.toggle('flipped');
+                    // Show/hide buttons based on flip state
+                    if (contactCard.classList.contains('flipped')) {
+                        saveContactBtn.style.display = 'flex';
+                        favoriteBtn.style.display = 'flex';
+                    } else {
+                        saveContactBtn.style.display = 'none';
+                        favoriteBtn.style.display = 'none';
+                    }
+                }
+            });
 
-            console.log('Current short path:', currentShortPath);
-            console.log('Redirect map:', redirectMap);
+            tabContactCardBtn.addEventListener('click', () => switchTab('contact-card'));
+            tabFavoritesBtn.addEventListener('click', () => switchTab('favorites'));
 
-            // Find a match in the redirect map
-            const match = redirectMap.find(entry => entry.short_path === currentShortPath);
-
-            if (match && match.long_url) {
-                displayMessage(`Redirecting to: ${match.long_url}`, 'success');
-                // Perform the redirection
-                window.location.replace(match.long_url);
-            } else {
-                displayMessage(`No redirect found for "${currentShortPath}".`, 'error');
-                // You can add a fallback here, e.g., redirect to a default page:
-                // setTimeout(() => {
-                //     window.location.replace('https://your-default-page.com');
-                // }, 3000); // Redirect after 3 seconds
-            }
-        }
-
-        // Initialize the redirection process when the window loads
-        window.onload = initRedirect;
+            // Initial data fetch and display
+            fetchAndProcessData();
+            switchTab('contact-card'); // Default to contact card tab on load
+        });
     </script>
 </body>
 </html>

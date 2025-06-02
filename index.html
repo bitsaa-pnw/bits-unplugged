@@ -146,11 +146,11 @@
                     </svg>
                     Scan Contact QR
                 </button>
-                <div id="my-qr-reader" style="width:100%; display: none;"></div>
+                <div id="reader" style="width:100%; display: none;"></div>
                 <p id="qr-scan-status" class="text-sm text-gray-500 mt-2"></p>
             </div>
 
-            <div id="contact-card" class="contact-card" display="none">
+            <div id="contact-card" class="contact-card">
                 <div id="card-inner" class="card-inner">
                     <div id="card-front" class="card-face card-front">
                         <h2 id="display-name-front" class="text-3xl font-bold text-gray-800 mb-2">Loading Contact...</h2>
@@ -208,7 +208,7 @@
                 </div>
             </div>
 
-            <div id="not-found" class="not-found text-red-600 text-xl font-semibold mt-8 text-center" style="display: none;">
+            <div id="not-found" class="not-found text-red-600 text-xl font-semibold mt-8 text-center" >
                 <p>Contact not found.</p>
                 <p id="contact-error-msg" class="text-base text-gray-500 mt-2">Contact not found in dataset</p>
             </div>
@@ -232,7 +232,7 @@
     </script>
 
     <script>
-        let html5QrCodeScanner = null; 
+        let html5QrCode = null; 
         // domReady function from your example
         function domReady(fn) {
             if (
@@ -253,7 +253,7 @@
             // IMPORTANT: Replace this URL with your actual Google Spreadsheet TSV URL.
             // This URL is only used if DEBUG_MODE is set to false.
             // Example format: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=tsv&gid=YOUR_SHEET_GID
-            const googleSpreadsheetTSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CVEFb-TyetHgpABQev94sh_DHclHh62O6_hJIzIoWB6hVxMS-hHvIDhbEGzwxPVnMRf9KXNyiokl/pub?output=tsv'
+            const googleSpreadsheetJsonUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CVEFb-TyetHgpABQev94sh_DHclHh62O6_hJIzIoWB6hVxMS-hHvIDhbEGzwxPVnMRf9KXNyiokl/pub?output=tsv'; 
 
             // Debug data in JSON format (mimics the structure we want after parsing)
             const debugJsonData = [
@@ -306,9 +306,9 @@
 
             // --- QR Scan Elements ---
             const scanQrBtn = document.getElementById('scan-qr-btn');
-            const qrReaderDiv = document.getElementById('my-qr-reader');
+            // Changed ID from 'my-qr-reader' to 'reader'
+            const qrReaderDiv = document.getElementById('reader'); 
             const qrScanStatus = document.getElementById('qr-scan-status');
-            // let html5QrCodeScanner = null;
 
 
             // --- Local Storage Functions for Favorites ---
@@ -383,7 +383,7 @@
                 errorMessageDiv.querySelector('p:first-child').textContent = message;
                 saveContactBtn.style.display = 'none'; // Hide buttons on error
                 favoriteBtn.style.display = 'none';
-                stopQrScanner(); // Removed QR scanner call
+                stopQrScanner();
             }
 
             function showNotFoundMessage() {
@@ -393,7 +393,7 @@
                 notFoundDiv.style.display = 'block';
                 saveContactBtn.style.display = 'none'; // Hide buttons on not found
                 favoriteBtn.style.display = 'none';
-                stopQrScanner(); // Removed QR scanner call
+                stopQrScanner();
             }
 
             // Function to generate and download vCard
@@ -446,25 +446,40 @@
                 notFoundDiv.style.display = 'none';
                 errorMessageDiv.style.display = 'none';
 
-                if (!html5QrCodeScanner) {
-                    html5QrCodeScanner = new Html5QrcodeScanner(
-                         "my-qr-reader",
-                         { fps: 10, qrbos: 250 }
-                    );
+                if (!html5QrCode) {
+                    // Initialize Html5Qrcode with the ID of the reader element
+                    html5QrCode = new Html5Qrcode("reader");
                 }
-                html5QrCodeScanner.render(onScanSuccess);
+                
+                // Configuration for the QR scanner
+                const config = { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 } 
+                };
+
+                // Start the QR code scanner preferring the back camera ('environment')
+                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                    .catch(err => {
+                        console.error("Failed to start QR scanner:", err);
+                        qrScanStatus.textContent = `Error starting scanner: ${err.message}`;
+                        showErrorMessage("Failed to start QR scanner. Please ensure camera access and try again.");
+                    });
             }
 
             function stopQrScanner() {
                 console.log("Stopping QR scanner...");
-                if (html5QrCodeScanner && html5QrCodeScanner.html5Qrcode.isScanning) {
+                // Check if html5QrCode is initialized and currently scanning
+                if (html5QrCode && html5QrCode.isScanning) {
                     try {
-                        html5QrCodeScanner.clear();
-                        html5QrCodeScanner.pause();
-                        html5QrCodeScanner.html5Qrcode.stop()
-                        console.log("QR scanner stopped.");
+                        html5QrCode.stop()
+                            .then(() => {
+                                console.log("QR scanner stopped.");
+                            })
+                            .catch((err) => {
+                                console.warn("Failed to stop QR scanner:", err);
+                            });
                     } catch (err) {
-                        console.warn("Failed to stop QR scanner:", err);
+                        console.warn("Failed to stop QR scanner (sync error):", err);
                     }
                 }
                 qrReaderDiv.style.display = 'none';
@@ -475,8 +490,7 @@
             function onScanSuccess(decodedText, decodedResult) {
                 console.log(`QR Code scanned: ${decodedText}`);
                 qrScanStatus.textContent = `QR Code scanned: ${decodedText}`;
-                html5QrCodeScanner.clear();
-                scanQrBtn.style.display = 'flex'; // Show scan button again
+                stopQrScanner(); // Stop scanner after successful scan
 
                 try {
                     const scannedUrl = new URL(decodedText);
@@ -516,19 +530,12 @@
                 return true; // Prevent further processing
             }
 
-            // function onScanFailure(error) {
-            //     if (qrReaderDiv.style.display !== 'none') {
-            //         qrScanStatus.textContent = 'Scanning failed or no QR code detected.';
-            //     }
-            // }
-
             // --- Contact Card Logic ---
             function loadContactCard(idToLoad) {
                 // Reset card state
                 contactCard.classList.remove('flipped');
                 saveContactBtn.style.display = 'none';
                 favoriteBtn.style.display = 'none';
-                // stopQrScanner(); // Removed QR scanner call
 
                 const foundContact = allContactsData.find(contact => contact.id === idToLoad);
 
@@ -658,7 +665,7 @@
                 if (DEBUG_MODE) {
                     dataSourcePromise = Promise.resolve(debugJsonData); // Directly use debug JSON data
                 } else {
-                    dataSourcePromise = fetch(googleSpreadsheetTSVUrl)
+                    dataSourcePromise = fetch(googleSpreadsheetJsonUrl)
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error(`HTTP error! status: ${response.status}. Check if the spreadsheet URL is correct and published publicly.`);
@@ -723,8 +730,7 @@
                             loadContactCard(idFromUrl);
                         } else {
                             // If no ID is provided and not in debug mode, or no default, show not found
-                            contactCard.style.display = 'none';
-                            console.warn("No contact ID provided in URL or debug mode");
+                            showNotFoundMessage();
                         }
                     })
                     .catch(error => {
@@ -744,8 +750,6 @@
                 // Hide all tab contents
                 contactCardTabContent.style.display = 'none';
                 favoritesTabContent.style.display = 'none';
-
-                // Removed QR scanner stop logic here
 
                 // Activate the selected tab and show its content
                 if (tabName === 'contact-card') {
@@ -788,7 +792,6 @@
                 }
             });
 
-            // Removed QR button event listener
             scanQrBtn.addEventListener('click', startQrScanner); 
 
             tabContactCardBtn.addEventListener('click', () => switchTab('contact-card'));

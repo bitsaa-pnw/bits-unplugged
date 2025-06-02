@@ -19,6 +19,23 @@
             padding: 20px; /* Add some padding for smaller screens */
             box-sizing: border-box; /* Include padding in element's total width and height */
         }
+
+        body:before {
+            content: "";
+            position: absolute;
+            width: 120%;
+            height: 100%;
+            top: -50%;
+            left: -50%;
+            z-index: -1;
+            background: #cf2003;
+            transform: rotate(-30deg);
+            /* Ensure browser compatibility */
+            -moz-transform: rotate(-30deg);
+            -webkit-transform: rotate(-30deg);
+            -o-transform: rotate(-30deg);
+            -ms-transform: rotate(-30deg);
+        }
         /* Main container for the whole application */
         .app-container {
             max-width: 800px; /* Wider for favorites list */

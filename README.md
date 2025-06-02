@@ -34,7 +34,7 @@ To set up and run the Contact Hub application, follow these steps:
 The application can load contact data from two sources:
 
 1.  **Debug Mode (Default)**: Uses a hardcoded JSON dataset for demonstration purposes.
-2.  **Google Spreadsheet**: Fetches data from a publicly published Google Spreadsheet.
+2.  **Google Spreadsheet**: Fetches data from a publicly published Google Spreadsheet in TSV (Tab Separated Values) format.
 
 To switch between modes and configure your data source:
 
@@ -42,26 +42,25 @@ To switch between modes and configure your data source:
 2.  **Locate Configuration Variables**: Find the following lines within the `<script>` tag:
 
     ```javascript
-    const DEBUG_MODE = true;
-    const googleSpreadsheetJsonUrl = 'YOUR_GOOGLE_SPREADSHEET_JSON_URL_HERE';
+    const DEBUG_MODE = false;
+    const googleSpreadsheetTSVUrl = 'YOUR_GOOGLE_SPREADSHEET_TSV_URL_HERE';
     ```
 
-3.  **To use Debug Data**: Ensure `DEBUG_MODE` is set to `true`. No further configuration is needed for the URL.
+3.  **To use Debug Data**: Set `DEBUG_MODE` to `true`. When `DEBUG_MODE` is `true`, the application might also automatically seed up to 4 random contacts as favorites if your local storage is empty. No further configuration is needed for the URL.
 4.  **To use Google Spreadsheet Data**:
     * Set `DEBUG_MODE` to `false`.
-    * Replace `'YOUR_GOOGLE_SPREADSHEET_JSON_URL_HERE'` with the actual JSON URL of your Google Spreadsheet.
-    * **Important**: Your Google Spreadsheet must be published to the web in JSON format. The URL typically looks like: `https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/gviz/tq?tqx=out:json&gid=YOUR_SHEET_GID`
+    * Replace `'YOUR_GOOGLE_SPREADSHEET_TSV_URL_HERE'` with the actual TSV URL of your Google Spreadsheet.
+    * **Important**: Your Google Spreadsheet must be published to the web in TSV format. The URL typically looks like: `https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=tsv&gid=YOUR_SHEET_GID`
     * Ensure your spreadsheet columns match the expected keys in the JavaScript code (e.g., `id`, `display name`, `subtitle`, `contact number`, `email`, `linkedin_id`, `instagram_id`).
 
 ### Google Spreadsheet Interaction Details
 
 When `DEBUG_MODE` is set to `false`, the application interacts with a Google Spreadsheet to fetch contact data. Here's how it works:
 
-1.  **Data Fetching**: The `fetchAndProcessData` function makes an HTTP request to the `googleSpreadsheetJsonUrl` using the `fetch` API.
-2.  **JSON Parsing**: Google Sheets API wraps its JSON output with `google.visualization.Query.setResponse(`. The code specifically strips this wrapper to extract the raw JSON string.
-3.  **Data Transformation**: The extracted JSON is then parsed. The column headers are retrieved from `jsonData.table.cols`, and each row's data is processed from `jsonData.table.rows`.
-4.  **Object Mapping**: For each row, the values from the `c` (cells) array are mapped to an object using the retrieved column headers as keys. Null values are converted to empty strings.
-5.  **Error Handling**: If the fetch operation fails (e.g., network error, incorrect URL, or spreadsheet not published publicly) or the JSON structure is invalid, an error message is displayed to the user.
+1.  **Data Fetching**: The `fetchAndProcessData` function makes an HTTP request to the `googleSpreadsheetTSVUrl` using the `fetch` API.
+2.  **TSV Parsing**: The fetched plain text data (TSV) is split into lines, and the first line is treated as headers (column names). Each subsequent line is split by tabs to get the values for each row.
+3.  **Object Mapping**: For each row, the values are mapped to an object using the retrieved column headers as keys. Empty values are converted to empty strings.
+4.  **Error Handling**: If the fetch operation fails (e.g., network error, incorrect URL, or spreadsheet not published publicly) or the TSV structure is invalid, an error message is displayed to the user.
 
 ## Usage
 

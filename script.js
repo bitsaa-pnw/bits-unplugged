@@ -1,18 +1,7 @@
 let html5QrCode = null; 
 let allContactsData = [];
-// domReady function from your example
-function domReady(fn) {
-    if (
-        document.readyState === "complete" ||
-        document.readyState === "interactive"
-    ) {
-        setTimeout(fn, 1000); // Delay execution by 1 second
-    } else {
-        document.addEventListener("DOMContentLoaded", fn);
-    }
-}
 
-domReady(function() { 
+window.onload = function() { 
     // Set this to 'true' to use the hardcoded debug data below.
     // Set to 'false' to fetch from the Google Spreadsheet URL.
     const DEBUG_MODE = false; 
@@ -594,4 +583,4 @@ domReady(function() {
     // Initial data fetch and display
     fetchAndProcessData();
     switchTab('contact-card'); // Default to contact card tab on load
-}); // Changed from window.onload to domReady's callback
+};

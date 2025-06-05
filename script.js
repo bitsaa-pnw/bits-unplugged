@@ -9,6 +9,7 @@ window.onload = function() {
     // Local Storage Keys
     const SPREADSHEET_ID_STORAGE_KEY = 'contactHub_spreadsheetId';
     const SHEET_GID_STORAGE_KEY = 'contactHub_sheetGid';
+    const FORM_ID_STORAGE_KEY = 'contactHub_formId'; // New local storage key for form ID
 
     // Functions to get/set from Local Storage
     function getStoredSpreadsheetId() {
@@ -27,35 +28,55 @@ window.onload = function() {
         localStorage.setItem(SHEET_GID_STORAGE_KEY, gid);
     }
 
-    // Get 'sid' (spreadsheet ID) and 'gid' from the URL query parameters
+    function getStoredFormId() { // New function to get stored form ID
+        return localStorage.getItem(FORM_ID_STORAGE_KEY);
+    }
+
+    function setStoredFormId(id) { // New function to set stored form ID
+        localStorage.setItem(FORM_ID_STORAGE_KEY, id);
+    }
+
+    // Get 'sid' (spreadsheet ID), 'gid' (sheet GID), and 'fid' (form ID) from the URL query parameters
     const urlParams = new URLSearchParams(window.location.search);
     const sidFromUrl = urlParams.get('sid');
     const gidFromUrl = urlParams.get('gid');
+    const fidFromUrl = urlParams.get('fid'); // Get fid from URL
 
     let googleSpreadsheetTSVUrl;
     let currentSid;
     let currentGid;
+    let currentFormUrl; // This will be constructed from currentFormId
+    let currentFormId; // Declare currentFormId
 
+    // Logic for Spreadsheet ID (sid) and GID
     if (sidFromUrl) {
-        // If sid is provided in URL, use it and store it.
         currentSid = sidFromUrl;
         setStoredSpreadsheetId(sidFromUrl);
         if (gidFromUrl) {
             currentGid = gidFromUrl;
             setStoredSheetGid(gidFromUrl);
         } else {
-            // If gid not in URL, try to get from local storage or default to '0'.
-            currentGid = getStoredSheetGid() || '0';
+            currentGid = getStoredSheetGid() || '0'; // Use stored gid or default to '0'
         }
     } else {
-        // If sid not in URL, try to get from local storage.
         currentSid = getStoredSpreadsheetId();
-        // Always try to get gid from local storage if not provided in URL, or default to '0'.
-        currentGid = getStoredSheetGid() || '0';
+        currentGid = getStoredSheetGid() || '0'; // Use stored gid or default to '0'
     }
 
     if (currentSid) {
         googleSpreadsheetTSVUrl = `https://docs.google.com/spreadsheets/d/e/${currentSid}/pub?output=tsv&gid=${currentGid}`;
+    }
+
+    // Logic for Form ID (fid) and constructing Form URL
+    if (fidFromUrl) {
+        currentFormId = fidFromUrl;
+        setStoredFormId(fidFromUrl);
+    } else {
+        currentFormId = getStoredFormId();
+    }
+
+    if (currentFormId) {
+        currentFormUrl = `https://docs.google.com/forms/d/e/${currentFormId}/viewform`;
     }
 
 
@@ -115,7 +136,7 @@ window.onload = function() {
     const emailElem = document.getElementById('email');
     const linkedinRow = document.getElementById('linkedin-row');
     const linkedinLink = document.getElementById('linkedin-link');
-    const instagramRow = document.getElementById('instagram-row');
+    const instagramRow = document = document.getElementById('instagram-row');
     const instagramLink = document.getElementById('instagram-link');
     const saveContactBtn = document.getElementById('save-contact-btn');
     const favoriteBtn = document.getElementById('favorite-btn');
@@ -371,9 +392,14 @@ window.onload = function() {
 
     // New function to redirect to prefilled Google Form
     function redirectToPrefilledForm(contactId) {
+        if (!currentFormUrl) { // Check if currentFormUrl is defined
+            showErrorMessage("Form ID (fid) not provided in the URL or local storage. Please provide it as a URL parameter (e.g., ?fid=YOUR_FORM_ID) or ensure it was set previously.");
+            return;
+        }
+
         const contactToEdit = allContactsData.find(contact => contact.id === contactId);
 
-        const googleFormBaseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSdbWHo9YurZeDt809iKRf87mNaGLGWHEB35hPEmQjJmJx1MYg/viewform';
+        const googleFormBaseUrl = currentFormUrl; // Use the dynamic form URL
         const entryIds = {
             'id': 'entry.425553741',
             'display name': 'entry.1611557554',

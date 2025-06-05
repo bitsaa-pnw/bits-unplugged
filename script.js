@@ -6,10 +6,59 @@ window.onload = function() {
     // Set to 'false' to fetch from the Google Spreadsheet URL.
     const DEBUG_MODE = false;
 
-    // IMPORTANT: Replace this URL with your actual Google Spreadsheet TSV URL.
-    // This URL is only used if DEBUG_MODE is set to false.
-    // Example format: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=tsv&gid=YOUR_SHEET_GID
-    const googleSpreadsheetTSVUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CVEFb-TyetHgpABQev94sh_DHclHh62O6_hJIzIoWB6hVxMS-hHvIDhbEGzwxPVnMRf9KXNyiokl/pub?output=tsv';
+    // Local Storage Keys
+    const SPREADSHEET_ID_STORAGE_KEY = 'contactHub_spreadsheetId';
+    const SHEET_GID_STORAGE_KEY = 'contactHub_sheetGid';
+
+    // Functions to get/set from Local Storage
+    function getStoredSpreadsheetId() {
+        return localStorage.getItem(SPREADSHEET_ID_STORAGE_KEY);
+    }
+
+    function setStoredSpreadsheetId(id) {
+        localStorage.setItem(SPREADSHEET_ID_STORAGE_KEY, id);
+    }
+
+    function getStoredSheetGid() {
+        return localStorage.getItem(SHEET_GID_STORAGE_KEY);
+    }
+
+    function setStoredSheetGid(gid) {
+        localStorage.setItem(SHEET_GID_STORAGE_KEY, gid);
+    }
+
+    // Get 'sid' (spreadsheet ID) and 'gid' from the URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const sidFromUrl = urlParams.get('sid');
+    const gidFromUrl = urlParams.get('gid');
+
+    let googleSpreadsheetTSVUrl;
+    let currentSid;
+    let currentGid;
+
+    if (sidFromUrl) {
+        // If sid is provided in URL, use it and store it.
+        currentSid = sidFromUrl;
+        setStoredSpreadsheetId(sidFromUrl);
+        if (gidFromUrl) {
+            currentGid = gidFromUrl;
+            setStoredSheetGid(gidFromUrl);
+        } else {
+            // If gid not in URL, try to get from local storage or default to '0'.
+            currentGid = getStoredSheetGid() || '0';
+        }
+    } else {
+        // If sid not in URL, try to get from local storage.
+        currentSid = getStoredSpreadsheetId();
+        // Always try to get gid from local storage if not provided in URL, or default to '0'.
+        currentGid = getStoredSheetGid() || '0';
+    }
+
+    if (currentSid) {
+        googleSpreadsheetTSVUrl = `https://docs.google.com/spreadsheets/d/e/${currentSid}/pub?output=tsv&gid=${currentGid}`;
+    }
+
+
     const headerMapping = {
         'Timestamp': 'timestamp',
         'ID': 'id',
@@ -360,7 +409,6 @@ window.onload = function() {
             countdownTimerElem.textContent = countdown;
             if (countdown <= 0) {
                 clearInterval(interval);
-                redirectMessageDiv.style.display = 'none'; // Hide message after redirect
                 window.open(prefilledUrl, '_blank'); // Open in new tab
             }
         }, 1000);
@@ -593,6 +641,11 @@ window.onload = function() {
         if (DEBUG_MODE) {
             dataSourcePromise = Promise.resolve(debugJsonData); // Directly use debug JSON data
         } else {
+            // Check if googleSpreadsheetTSVUrl is defined before fetching
+            if (!googleSpreadsheetTSVUrl) {
+                showErrorMessage("Spreadsheet ID (sid) not provided in the URL or local storage. Please provide it as a URL parameter (e.g., ?sid=YOUR_SPREADSHEET_ID) or ensure it was set previously.");
+                return; // Stop execution if URL is not valid
+            }
             dataSourcePromise = fetch(googleSpreadsheetTSVUrl)
                 .then(response => {
                     if (!response.ok) {

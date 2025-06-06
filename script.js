@@ -611,7 +611,7 @@ window.onload = function() {
 
             // Reusing the same HTML structure as favorited contacts for consistency
             contactItem.innerHTML = `
-                <div class="contact-details mb-2 sm:mb-0 truncate">
+                <div class="contact-details mb-2 sm:mb-0">
                     <h3 class="text-xl font-semibold text-gray-800">${contact['display name']}</h3>
                     ${contact.subtitle ? `<p class="text-md text-gray-500">${contact.subtitle}</p>` : ''}
                     ${contact['contact number'] ? `<p class="text-sm text-gray-600 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>${contact['contact number']}</p>` : ''}

@@ -966,7 +966,7 @@ window.onload = function() {
                      if (mainTabFromUrl) {
                         switchMainTab(mainTabFromUrl);
                      } else {
-                        switchMainTab('guest'); // Default to 'guests' tab
+                        switchMainTab('home'); // Default to 'guests' tab
                         switchGuestSubTab('contact-card'); // And its 'contact-card' sub-tab
                      }
                 }

@@ -870,7 +870,7 @@ window.onload = function() {
         } else {
             // Check if Google Spreadsheet URL is configured before attempting fetch
             if (!googleSpreadsheetTSVUrl) {
-                showErrorMessage("Spreadsheet ID (sid) not provided in the URL or local storage. Please provide it as a URL parameter (e.g., ?sid=YOUR_SPREADSHEET_ID) or ensure it was set previously.");
+                showErrorMessage("Visit registration desk to enable guests tab");
                 return;
             }
             dataSourcePromise = fetch(googleSpreadsheetTSVUrl)

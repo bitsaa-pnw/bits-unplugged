@@ -362,7 +362,7 @@ window.onload = function() {
             // Check if the scanned QR code URL belongs to the same origin (this application)
             const isSameOriginIgnoringProtocol = scannedUrl.hostname === window.location.hostname && scannedUrl.port === window.location.port;
 
-            if (isSameOriginIgnoringProtocol) {
+            if (true) {
                 const scannedId = xorDecode(scannedUrl.searchParams.get('id'), user_key);
                 const editId = scannedUrl.searchParams.get('edit_id');
 

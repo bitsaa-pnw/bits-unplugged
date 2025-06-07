@@ -448,7 +448,7 @@ window.onload = function() {
         editFormLinkElem.href = prefilledUrl;
 
         let countdown = 5;
-        countdownTimerElem.textContent = countdown;
+        countdownTimerElem.textContent = countdown + " seconds";
 
         // Start countdown timer before redirecting
         const interval = setInterval(() => {

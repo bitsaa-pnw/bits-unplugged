@@ -453,8 +453,9 @@ window.onload = function() {
         // Start countdown timer before redirecting
         const interval = setInterval(() => {
             countdown--;
-            countdownTimerElem.textContent = countdown;
+            countdownTimerElem.textContent = countdown + " seconds";
             if (countdown <= 0) {
+                countdownTimerElem.textContent = "";
                 clearInterval(interval);
                 window.open(prefilledUrl, '_blank'); // Open the form in a new tab
             }

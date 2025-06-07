@@ -358,7 +358,14 @@ window.onload = function() {
         stopQrScanner(); // Stop scanner after successful scan
 
         try {
-            const scannedUrl = new URL(decodedText);
+            function ensureHttps(url) {
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    return url;
+                }
+                return `https://${url}`;
+            }
+
+            const scannedUrl = new URL(ensureHttps(decodedText));
             // Check if the scanned QR code URL belongs to the same origin (this application)
             const isSameOriginIgnoringProtocol = scannedUrl.hostname === window.location.hostname && scannedUrl.port === window.location.port;
 

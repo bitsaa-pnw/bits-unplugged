@@ -871,6 +871,9 @@ window.onload = function() {
      * @returns {string} The "decoded" original string.
      */
     function xorDecode(encodedHex, userKey) {
+        if (!encodedHex){
+            return encodedHex;
+        }
         if (!userKey) {
             console.warn("Warning: User key is empty. Decoding might not be effective.");
             // If no key, assume it was encoded without a key and just convert hex to char

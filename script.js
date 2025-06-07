@@ -36,9 +36,9 @@ window.onload = function() {
 
     // Parse URL parameters for spreadsheet ID, sheet GID, form ID, and the main tab
     const urlParams = new URLSearchParams(window.location.search);
-    const sidFromUrl = urlParams.get('sid');
-    const gidFromUrl = urlParams.get('gid');
-    const fidFromUrl = urlParams.get('fid');
+    const sidFromUrl = urlParams.get('sid') || "2PACX-1vR_3dmbnG6Uy1_lgg7kE8FNntF6-0T2bxMoUVKjqVS-wNaYKSYUGSHjXYHyFjCTfzfzYhBfaqM339yU";
+    const gidFromUrl = urlParams.get('gid') || "1022137878";
+    const fidFromUrl = urlParams.get('fid') || "1FAIpQLSeKZPU5Lni-gLYN1s9Y1YPRkuMDbrZc3_2N7SitaWkpujLQUw";
     const mainTabFromUrl = urlParams.get('tab'); // Get 'tab' parameter for main tab selection
 
     let googleSpreadsheetTSVUrl;

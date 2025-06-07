@@ -244,6 +244,41 @@ window.onload = function() {
     }
     // --- End Local Storage Functions for Favorites ---
 
+    function getLinkedInIdFromUrl(url) {
+        // Validate input: ensure the URL is a string and not empty.
+        if (typeof url !== 'string' || url.trim() === '') {
+            console.error("Invalid URL provided. Please provide a non-empty string.");
+            return null;
+        }
+
+        // Define regex patterns for different LinkedIn URL formats.
+        // Pattern for "in/" URLs (public profiles):
+        // It captures the part after "/in/" and before the next "/" or end of string.
+        const inPattern = /linkedin\.com\/in\/([a-zA-Z0-9_-]+)(?:\/|\?|$)/;
+
+        // Pattern for "sales/people/" or "recruiter/profile/" URLs (Sales Navigator/Recruiter):
+        // These typically contain a long alphanumeric ID starting with "ACoAAB".
+        const salesRecruiterPattern = /linkedin\.com\/(?:sales\/people|recruiter\/profile)\/([a-zA-Z0-9_-]+)(?:\/|\?|$)/;
+
+        let match;
+
+        // Try matching the "in/" pattern first.
+        match = url.match(inPattern);
+        if (match && match[1]) {
+            return match[1];
+        }
+
+        // If "in/" pattern didn't match, try the "sales/people/" or "recruiter/profile/" pattern.
+        match = url.match(salesRecruiterPattern);
+        if (match && match[1]) {
+            return match[1];
+        }
+
+        // If no known pattern matches, return null.
+        console.warn(`Could not extract LinkedIn ID from URL: ${url}`);
+        return url;
+    }
+
 
     // --- General UI Functions for displaying messages ---
     function showErrorMessage(message) {
@@ -279,7 +314,7 @@ window.onload = function() {
         const name = currentContactData['display name'] || 'Unknown Contact';
         const tel = currentContactData['contact number'] || '';
         const email = currentContactData.email || '';
-        const linkedinId = currentContactData.linkedin_id || '';
+        const linkedinId = getLinkedInIdFromUrl(currentContactData.linkedin_id) || '';
         const instagramId = currentContactData.instagram_id || '';
 
         // Construct the vCard string
